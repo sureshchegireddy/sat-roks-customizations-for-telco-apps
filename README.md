@@ -1,5 +1,7 @@
 # sat-roks-customizations-for-telco-apps
-This repository provides some guidance on openshift customizations that we discovered for typical networking and/or telco workloads/applications. The repo specifically targets environments where IBM's managed openshift service (ROKS) cluster(s) running on IBM Cloud Satellite need some alternative methods for configuring required capabilities in openshift, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
+**Disclaimer**: This repo is a **Work-In-Progress**, and is yet to be peer-reviewed.
+## Introduction
+This repository  provides some guidance on openshift customizations that we discovered for typical networking and/or telco workloads/applications. The repo specifically targets environments where IBM's managed openshift service (ROKS) cluster(s) running on IBM Cloud Satellite need some alternative methods for configuring required capabilities in openshift, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
 
 With IBM Cloud Satellite/ROKS (link to announcement) now supporting CoreOS-enabled locations and hosts, some of the custom configurations needed by typical network applications require alternate methods in ROKS as compared to OCP. 
 
@@ -123,11 +125,11 @@ spec:
 
 
 ## 5. Satellite storage driver install based on storage template
-IBM Cloud Satellite provides storage templates for a set of storage providers/drivers. This is an alternative to installing from Catalog, OperatorHub, Helm charts, etc. This concept and process is well captured in [IBM documentation](https://cloud.ibm.com/docs/satellite?topic=satellite-sat-storage-template-ov).
+IBM Cloud Satellite provides storage templates for a set of storage providers/drivers. This is an alternative to installing from Catalog, OperatorHub, Helm charts, etc. This concept and process is well captured in [IBM documentation for Satellite storage templates](https://cloud.ibm.com/docs/satellite?topic=satellite-sat-storage-template-ov).
 
 ## 6. SCC privileges for application deployment
-Satellite/ROKS requires the default service account in a project/namespace to have elevated SCC privileges. This is necessary when a deployment in the namespace attempts to create pods.
+Satellite/ROKS requires the default service account in a project/namespace to have elevated Security Context Constraint (SCC) privileges. This is necessary when a deployment in the namespace attempts to create pods that need elevated access.
 One workaround is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
 
 ## 7. ExternalIP support for services
-Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. However, and `externalIP` can be patched after the `service` is created. This `externalIP` is only reachable within the ROKS cluster, unlike in RH OCP.
+Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. However, an `externalIP` can be added using the `oc patch` command after the `service` has been created (with a `clusterIP`). This `externalIP` is only reachable within the ROKS cluster, unlike in RH OCP.
