@@ -6,14 +6,14 @@ This repository  provides some guidance on openshift customizations that we disc
 With IBM Cloud Satellite/ROKS (link to announcement) now supporting CoreOS-enabled locations and hosts, some of the custom configurations needed by typical network applications require alternate methods in ROKS as compared to OCP. 
 
 Some of the key capabilities that needed alternative way of configuring on ROKS included the following:
-1. [Hugepages setup](#1.-Hugepages-setup)
-2. [SCTP enablement](#2.-SCTP-enablement)
-3. [SR-IOV network node policy config](#3.-SR-IOV-network-node-policy-config)
-4. [CPU Manager and Single NUMA Node config](#4.-CPU-Manager-and-Single-NUMA-Node-config)
-5. [Storage driver install](#5.-Storage-driver-install)
-6. [SCC privileges for application deployment](#6.-SCC-privileges-for-application-deployment)
-7. [ExternalIP support for services](#7.-externalIP-support-for-services)
-8. [SR-IOV operator configuration](#8.-SR-IOV-operator-configuration)
+1. [Hugepages setup](#1.-hugepages-setup)
+2. [SCTP enablement](#2.-sctp-enablement)
+3. [SR-IOV operator configuration](#3.-sr-iov-operator-configuration)
+4. [CPU Manager and Single NUMA Node config](#4.-cpu-Manager-and-Single-numa-node-config)
+5. [Storage driver install](#5.-storage-driver-install)
+6. [SCC privileges for application deployment](#6.-scc-privileges-for-application-deployment)
+7. [ExternalIP support for services](#7.-externalip-support-for-services)
+
 
 In general the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
@@ -59,8 +59,8 @@ To [enable SCTP on the nodes RH OCP documentation](https://docs.openshift.com/co
 . . .
 ```
 
-## 3. SR-IOV network node policy config
-This process is likely the same of both RH OCP and ROKS, and is based on the type of SR-IOV device on the bare metal servers used for the OpenShift workers.
+## 3. SR-IOV operator configuration
+Satellite/ROKS requires additional configuration setup when installing the SR-IOV operator on the cluster. These steps are currently (as of Oct 12, 2022), documented in IBM [Staging documentation for SR-IOV Setup](https://test.cloud.ibm.com/docs/openshift?topic=openshift-satellite-sriov).
 
 ## 4. CPU and Single-NUMA-Node config
 [Setting up CPU Manager as per RH OCP documentation](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/using-cpu-manager.html#seting_up_cpu_manager_using-cpu-manager) also requires support for `MachineConfigPool` resource.
@@ -137,5 +137,3 @@ Satellite/ROKS does not allow `deployments` to create `services` that have an `e
 
 Additional steps needed to be executed to expose the service externally from the cluster . . . to-be-discovered . . .
 
-## 8. SR-IOV operator configuration
-Satellite/ROKS requires additional configuration setup when installing the SR-IOV operator on the cluster. These steps are currently (as of Oct 12, 2022), documented in IBM [Staging documentation for SR-IOV Setup](https://test.cloud.ibm.com/docs/openshift?topic=openshift-satellite-sriov).
