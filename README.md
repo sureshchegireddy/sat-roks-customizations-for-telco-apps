@@ -6,13 +6,13 @@ This repository  provides some guidance on openshift customizations that we disc
 With IBM Cloud Satellite/ROKS (link to announcement) now supporting CoreOS-enabled locations and hosts, some of the custom configurations needed by typical network applications require alternate methods in ROKS as compared to OCP. 
 
 Some of the key capabilities that needed alternative way of configuring on ROKS included the following:
-1. [Hugepages setup](#1.-hugepages-setup)
-2. [SCTP enablement](#2.-sctp-enablement)
-3. [SR-IOV operator configuration](#3.-sr-iov-operator-configuration)
-4. [CPU Manager and Single NUMA Node config](#4.-cpu-Manager-and-Single-numa-node-config)
-5. [Storage driver install](#5.-storage-driver-install)
-6. [SCC privileges for application deployment](#6.-scc-privileges-for-application-deployment)
-7. [ExternalIP support for services](#7.-externalip-support-for-services)
+1. [Hugepages setup](#1-hugepages-setup)
+2. [SCTP enablement](#2-sctp-enablement)
+3. [SR-IOV operator configuration](#3-sr-iov-operator-configuration)
+4. [CPU Manager and Single NUMA Node config](#4-cpu-Manager-and-Single-numa-node-config)
+5. [Storage driver install](#5-storage-driver-install)
+6. [SCC privileges for application deployment](#6-scc-privileges-for-application-deployment)
+7. [ExternalIP support for services](#7-externalip-support-for-services)
 
 
 In general the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
