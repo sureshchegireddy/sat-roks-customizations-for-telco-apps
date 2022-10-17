@@ -1,7 +1,9 @@
 # sat-roks-customizations-for-telco-apps
 **Disclaimer**: This repo is a **Work-In-Progress**, and is yet to be peer-reviewed.
 ## Introduction
-This repository  provides some guidance on openshift customizations that we discovered for typical networking and/or telco workloads/applications. The repo specifically targets environments where IBM's managed openshift service (ROKS) cluster(s) running on IBM Cloud Satellite need some alternative methods for configuring required capabilities in openshift, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
+This repository  provides some guidance on openshift customizations that were discovered as prerequisites for typical networking and/or telco workloads/applications. The repo specifically targets on-premises infrastructure (hosts, network, etc.) attached to the IBM Cloud Satellite location where IBM's managed openshift service (ROKS) cluster(s) are deployed on baremetal servers representing the worker nodes. This setup needs some alternative methods for configuring required capabilities in ROKS, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
+
+Note that these observations and configurations have been taken from Satellite/ROKS cluster at OpenShift version 4.9.48.
 
 With IBM Cloud Satellite/ROKS (link to announcement) now supporting CoreOS-enabled locations and hosts, some of the custom configurations needed by typical network applications require alternate methods in ROKS as compared to OCP. 
 
@@ -13,6 +15,7 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 5. [Storage driver install](#5-storage-driver-install)
 6. [SCC privileges for application deployment](#6-scc-privileges-for-application-deployment)
 7. [ExternalIP support for services](#7-externalip-support-for-services)
+8. [NodePort based service](#8-NodePort-based-service-creation)
 
 
 In general the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
@@ -133,7 +136,18 @@ Satellite/ROKS requires the default service account in a project/namespace to ha
 One workaround is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
 
 ## 7. ExternalIP support for services
-Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. However, an `externalIP` can be added using the `oc patch` command after the `service` has been created (with a `clusterIP`). This `externalIP` is only reachable within the ROKS cluster, unlike in RH OCP.
+Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. The controller/manager attempting to deploy such a service will encounter errors similar to the following sample:
 
-Additional steps needed to be executed to expose the service externally from the cluster . . . to-be-discovered . . .
+```
+2022-09-22T19:00:50.678Z        ERROR   . . . "namespace": "default", "error": "services \"sample-svc-name\" is forbidden: spec.externalIPs: Forbidden: externalIPs have been disabled"}
+```
+The workaround is to create the `service` with `ClusterIP` first. And later, an `externalIP` can be added using the `oc patch` command after the `service` has been created. However, this `externalIP` is only reachable within the ROKS cluster, unlike in RH OCP.
 
+But for on-prem infrastructure it is possible to add internal network routes to allow connecting to the subnet on which the `services` have their `ExternalIP` configured.
+
+The IBM Cloud satellite documentation also lists [multiple ways to expose applications on Satellite/ROKS clusters](https://cloud.ibm.com/docs/openshift?topic=openshift-sat-expose-apps).
+
+## 8. NodePort based service creation
+For cases where an application `service` needs to be exposed using `NodePort`, in addition to, already being exposed via either `clusterIP` and/or `ExternalIP` it's necessary to review the `yaml` definition of the `NodePort` based service, if it's [created via `oc` CLI](https://docs.openshift.com/container-platform/4.9/networking/configuring_ingress_cluster_traffic/configuring-ingress-cluster-traffic-nodeport.html#nw-exposing-service_configuring-ingress-cluster-traffic-nodeport).
+
+This is because, by default the `NodePort`-based service appears to be created with "TCP" protocol (i.e., even if the existing service has "UDP" or other protocol), and the `Targetport` value set to be the same as service `port` of the existing service (i.e., irrespective of the protocol specified in the `clusterIP`/`externalIP` based service).
