@@ -20,7 +20,8 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 10. [Performance AddOn Operator not supported](#10-Performance-AddOn-Operator-not-supported)
 
 
-In general the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
+In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
+
 
 ## 1. Hugepages setup
 The [RH OCP documentation for configuring huge pages](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/what-huge-pages-do-and-how-they-are-consumed-by-apps.html#configuring-huge-pages_huge-pages) on OpenShift nodes requires creating yamls with the `Tuned` and `MachineConfigPool` resources. Since `MachineConfigPool` resource is not yet supported in ROKS, one alternative is to add the `kernel arguments` in the RH CoreOS ignition file during satellite host attach operation (presuming the hosts run RH CoreOS).
@@ -34,6 +35,9 @@ The [RH OCP documentation for configuring huge pages](https://docs.openshift.com
   },
 . . .
 ```
+
+An example [ignition file](./examples/sample-ignition-file.json) is available in the [examples](./examples/) folder of this repo for reference.
+
 
 ## 2. SCTP enablement
 To [enable SCTP on the nodes RH OCP documentation](https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#using-machineconfigs-to-change-machines) points to use of `MachineConfig` objects. So, in order to accomplish this on ROKS, we used the ignition file entries to write to the sctp configuration files (`sctp-blacklist.conf` and `sctp-load.conf`).
@@ -64,8 +68,10 @@ To [enable SCTP on the nodes RH OCP documentation](https://docs.openshift.com/co
 . . .
 ```
 
+
 ## 3. SR-IOV operator configuration
 Satellite/ROKS requires additional configuration setup when installing the SR-IOV operator on the cluster. These steps are currently (as of Oct 12, 2022), documented in IBM [Staging documentation for SR-IOV Setup](https://test.cloud.ibm.com/docs/openshift?topic=openshift-satellite-sriov).
+
 
 ## 4. CPU and Single-NUMA-Node config
 [Setting up CPU Manager as per RH OCP documentation](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/using-cpu-manager.html#seting_up_cpu_manager_using-cpu-manager) also requires support for `MachineConfigPool` resource.
@@ -133,6 +139,7 @@ spec:
 ## 5. Storage driver install
 IBM Cloud Satellite provides storage templates for a set of storage providers/drivers. This is an alternative to installing from Catalog, OperatorHub, Helm charts, etc. This concept and process is well captured in [IBM documentation for Satellite storage templates](https://cloud.ibm.com/docs/satellite?topic=satellite-sat-storage-template-ov).
 
+
 ## 6. SCC privileges for application deployment
 Satellite/ROKS requires the default service account in a project/namespace to have elevated Security Context Constraint (SCC) privileges. This is necessary when a deployment in the namespace attempts to create pods that need elevated access.
 
@@ -144,6 +151,7 @@ provider "privileged": Forbidden: not usable by user or serviceaccount, provider
 ```
 
 One way to configure this is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
+
 
 ## 7. ExternalIP support for services
 Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. The controller/manager attempting to deploy such a service will encounter errors similar to the following sample:
@@ -157,10 +165,12 @@ But for on-prem infrastructure it is possible to add internal network routes to 
 
 The IBM Cloud satellite documentation also lists [multiple ways to expose applications on Satellite/ROKS clusters](https://cloud.ibm.com/docs/openshift?topic=openshift-sat-expose-apps).
 
+
 ## 8. NodePort based service creation
 For cases where an application `service` needs to be exposed using `NodePort`, in addition to, already being exposed via either `clusterIP` and/or `ExternalIP` it's necessary to review the `yaml` definition of the `NodePort` based service, after it's [created via `oc` CLI](https://docs.openshift.com/container-platform/4.9/networking/configuring_ingress_cluster_traffic/configuring-ingress-cluster-traffic-nodeport.html#nw-exposing-service_configuring-ingress-cluster-traffic-nodeport).
 
 This is because, by default the `NodePort`-based service appears to be created with "TCP" protocol (i.e., even if the existing service has "UDP" or other protocol), and the `Targetport` value set to be the same as service `port` of the existing service (i.e., irrespective of the protocol specified in the `clusterIP`/`externalIP` based service).
+
 
 ## 9. NodePort service range
 The [`NodePort` service range can be expanded on regular RH OCP clusters](https://docs.openshift.com/container-platform/4.9/networking/configuring-node-port-service-range.html).
@@ -172,6 +182,7 @@ Error from server (NotFound): configmaps "config" not found
 ```
 
 The workaround is to change the ports that the service uses to the default port range of `30000-32767`.
+
 
 ## 10. Performance AddOn Operator not supported
 The [OpenShift Performance Addon operator](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes.html) helps in tuning the cluster for applications seeking performance benefits via low latency configurations on the nodes.
