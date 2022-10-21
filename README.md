@@ -16,6 +16,8 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 6. [SCC privileges for application deployment](#6-scc-privileges-for-application-deployment)
 7. [ExternalIP support for services](#7-externalip-support-for-services)
 8. [NodePort based service](#8-NodePort-based-service-creation)
+9. [NodePort service range](#9-NodePort-service-range)
+10. [Performance AddOn Operator not supported](#10-Performance-AddOn-Operator-not-supported)
 
 
 In general the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
@@ -133,7 +135,15 @@ IBM Cloud Satellite provides storage templates for a set of storage providers/dr
 
 ## 6. SCC privileges for application deployment
 Satellite/ROKS requires the default service account in a project/namespace to have elevated Security Context Constraint (SCC) privileges. This is necessary when a deployment in the namespace attempts to create pods that need elevated access.
-One workaround is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
+
+The following is a sample error message symptomatic of this case when a `deployment` attempts to create pods needing elevated privileges:
+```
+pods "pod-name-568fc89576-" is forbidden: unable to validate against any security context constraint: [provider "anyuid": Forbidden: not usable by user or serviceaccount, spec.volumes[4]: Invalid value: "hostPath": hostPath volumes are not allowed to be used, spec.containers[1].securityContext.runAsUser: Invalid value: 0: must be in the ranges: [1000670000, 1000679999], spec.containers[1].securityContext.privileged: Invalid value: true: Privileged containers are not allowed, spec.containers[1].securityContext.capabilities.add: Invalid value: "SYS_PTRACE": capability may not be added, provider "hostmount-anyuid": Forbidden: not usable by user or serviceaccount, provider "hostnetwork": Forbidden: not usable by user or serviceaccount, provider "hostaccess": Forbidden: not usable by user or serviceaccount, 
+. . .
+provider "privileged": Forbidden: not usable by user or serviceaccount, provider "rook-ceph-csi": Forbidden: not usable by user or serviceaccount]
+```
+
+One way to configure this is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
 
 ## 7. ExternalIP support for services
 Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. The controller/manager attempting to deploy such a service will encounter errors similar to the following sample:
@@ -148,6 +158,22 @@ But for on-prem infrastructure it is possible to add internal network routes to 
 The IBM Cloud satellite documentation also lists [multiple ways to expose applications on Satellite/ROKS clusters](https://cloud.ibm.com/docs/openshift?topic=openshift-sat-expose-apps).
 
 ## 8. NodePort based service creation
-For cases where an application `service` needs to be exposed using `NodePort`, in addition to, already being exposed via either `clusterIP` and/or `ExternalIP` it's necessary to review the `yaml` definition of the `NodePort` based service, if it's [created via `oc` CLI](https://docs.openshift.com/container-platform/4.9/networking/configuring_ingress_cluster_traffic/configuring-ingress-cluster-traffic-nodeport.html#nw-exposing-service_configuring-ingress-cluster-traffic-nodeport).
+For cases where an application `service` needs to be exposed using `NodePort`, in addition to, already being exposed via either `clusterIP` and/or `ExternalIP` it's necessary to review the `yaml` definition of the `NodePort` based service, after it's [created via `oc` CLI](https://docs.openshift.com/container-platform/4.9/networking/configuring_ingress_cluster_traffic/configuring-ingress-cluster-traffic-nodeport.html#nw-exposing-service_configuring-ingress-cluster-traffic-nodeport).
 
 This is because, by default the `NodePort`-based service appears to be created with "TCP" protocol (i.e., even if the existing service has "UDP" or other protocol), and the `Targetport` value set to be the same as service `port` of the existing service (i.e., irrespective of the protocol specified in the `clusterIP`/`externalIP` based service).
+
+## 9. NodePort service range
+The [`NodePort` service range can be expanded on regular RH OCP clusters](https://docs.openshift.com/container-platform/4.9/networking/configuring-node-port-service-range.html).
+
+However, this is not allowed on Sateelite/ROKS clusters (possible due to performance reasons). While the attempt to patch the configuration as per above RH OCP documentation may appear to work, the below failure during the confirmation step is indicative of this limitation:
+```
+# oc get configmaps -n openshift-kube-apiserver config   -o jsonpath="{.data['config\.yaml']}" |   grep -Eo '"service-node-port-range":["[[:digit:]]+-[[:digit:]]+"]'
+Error from server (NotFound): configmaps "config" not found
+```
+
+The workaround is to change the ports that the service uses to the default port range of `30000-32767`.
+
+## 10. Performance AddOn Operator not supported
+The [OpenShift Performance Addon operator](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes.html) helps in tuning the cluster for applications seeking performance benefits via low latency configurations on the nodes.
+
+This operator is not currently supported on Satellite/ROKS.
