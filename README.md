@@ -19,7 +19,7 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 9. [Nodeport service range](#9-nodePort-service-range)
 10. [Performance AddOn Operator not supported](#10-performance-addon-operator-not-supported)
 11. [PTP operator not supported](#11-ptp-operator-not-supported)
-12. [Real time kernel not supported](real-time-kernel-not-supported)
+12. [Real time kernel not supported](#real-time-kernel-not-supported)
 
 In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
@@ -195,4 +195,5 @@ The (OpenShift Precision Time Protocol operator)[https://docs.openshift.com/cont
 
 ## 12. Real time kernel not supported
 RH OCP allows users to (switch to a realtime kernel on bare metal workers)[https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#nodes-nodes-rtkernel-arguments_post-install-machine-configuration-tasks]. This is typically required by telco workloads like RAN components, etc. that seek low latency and high degree of determinism. RH OCP manages to install and enable `kernel-rt` on baremetal worker nodes via `machigeConfig` support.
+
 Currently, IBM Satellite/ROKS does not yet support replacing the kernel with a real-time kernel.
