@@ -19,7 +19,7 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 9. [Nodeport service range](#9-nodePort-service-range)
 10. [Performance AddOn Operator not supported](#10-performance-addon-operator-not-supported)
 11. [PTP operator not supported](#11-ptp-operator-not-supported)
-12. [Real time kernel not supported](#real-time-kernel-not-supported)
+12. [Real time kernel not supported](#12-real-time-kernel-not-supported)
 
 In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
@@ -174,7 +174,7 @@ This is because, by default the `NodePort`-based service appears to be created w
 
 
 ## 9. NodePort service range
-The [`NodePort` service range can be expanded on regular RH OCP clusters](https://docs.openshift.com/container-platform/4.9/networking/configuring-node-port-service-range.html).
+The [`NodePort` service range can be expanded on RH OCP](https://docs.openshift.com/container-platform/4.9/networking/configuring-node-port-service-range.html) clusters.
 
 However, this is not allowed on Sateelite/ROKS clusters (possible due to performance reasons). While the attempt to patch the configuration as per above RH OCP documentation may appear to work, the below failure during the confirmation step is indicative of this limitation:
 ```
@@ -188,12 +188,12 @@ The workaround is to change the ports that the service uses to the default port 
 ## 10. Performance AddOn Operator not supported
 The [OpenShift Performance Addon operator](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes.html) helps in tuning the cluster for applications seeking performance benefits via low latency configurations on the nodes.
 
-This operator is not currently supported on Satellite/ROKS. Also since the PerformanceProfile resource that is used to enable some of these setttings requires support for MachineConfig/MachineConfigPool, (IBM ROKS documentation points to alternative ways for tuning performance for RH CoreOS worker nodes)[https://cloud.ibm.com/docs/openshift?topic=openshift-rhcos-performance].
+This operator is not currently supported on Satellite/ROKS. Also since the `PerformanceProfile` resource that is used to enable some of these setttings requires support for `MachineConfig`/`MachineConfigPool`, (IBM ROKS documentation points to alternative ways for tuning performance for RH CoreOS worker nodes)[https://cloud.ibm.com/docs/openshift?topic=openshift-rhcos-performance].
 
 ## 11. PTP Operator not supported
 The (OpenShift Precision Time Protocol operator)[https://docs.openshift.com/container-platform/4.9/networking/using-ptp.html] is not currently supported on Satellite/ROKS.
 
 ## 12. Real time kernel not supported
-RH OCP allows users to (switch to a realtime kernel on bare metal workers)[https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#nodes-nodes-rtkernel-arguments_post-install-machine-configuration-tasks]. This is typically required by telco workloads like RAN components, etc. that seek low latency and high degree of determinism. RH OCP manages to install and enable `kernel-rt` on baremetal worker nodes via `machigeConfig` support.
+RH OCP allows users to (switch to a realtime kernel on bare metal workers)[https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#nodes-nodes-rtkernel-arguments_post-install-machine-configuration-tasks]. This is typically required by telco workloads like RAN components (Centralized Unit(CU), Distribution Unit (DU)), etc. that seek low latency and high degree of determinism. RH OCP manages to install and enable `kernel-rt` on baremetal worker nodes via `machigeConfig` support.
 
-Currently, IBM Satellite/ROKS does not yet support replacing the kernel with a real-time kernel.
+Currently, IBM Satellite/ROKS does not yet support replacing the kernel on the CoreOS workers with a real-time kernel.
