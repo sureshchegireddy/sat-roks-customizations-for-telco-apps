@@ -11,14 +11,15 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 1. [Hugepages setup](#1-hugepages-setup)
 2. [SCTP enablement](#2-sctp-enablement)
 3. [SR-IOV operator configuration](#3-sr-iov-operator-configuration)
-4. [CPU Manager and Single NUMA Node config](#4-cpu-Manager-and-Single-numa-node-config)
+4. [CPU and Single NUMA Node config](#4-cpu-and-Single-numa-node-config)
 5. [Storage driver install](#5-storage-driver-install)
 6. [SCC privileges for application deployment](#6-scc-privileges-for-application-deployment)
 7. [ExternalIP support for services](#7-externalip-support-for-services)
-8. [NodePort based service](#8-NodePort-based-service-creation)
-9. [NodePort service range](#9-NodePort-service-range)
-10. [Performance AddOn Operator not supported](#10-Performance-AddOn-Operator-not-supported)
-
+8. [Nodeport based service](#8-nodePort-based-service-creation)
+9. [Nodeport service range](#9-nodePort-service-range)
+10. [Performance AddOn Operator not supported](#10-performance-addon-operator-not-supported)
+11. [PTP operator not supported](#11-ptp-operator-not-supported)
+12. [Real time kernel not supported](real-time-kernel-not-supported)
 
 In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
@@ -187,4 +188,11 @@ The workaround is to change the ports that the service uses to the default port 
 ## 10. Performance AddOn Operator not supported
 The [OpenShift Performance Addon operator](https://docs.openshift.com/container-platform/4.9/scalability_and_performance/cnf-performance-addon-operator-for-low-latency-nodes.html) helps in tuning the cluster for applications seeking performance benefits via low latency configurations on the nodes.
 
-This operator is not currently supported on Satellite/ROKS.
+This operator is not currently supported on Satellite/ROKS. Also since the PerformanceProfile resource that is used to enable some of these setttings requires support for MachineConfig/MachineConfigPool, (IBM ROKS documentation points to alternative ways for tuning performance for RH CoreOS worker nodes)[https://cloud.ibm.com/docs/openshift?topic=openshift-rhcos-performance].
+
+## 11. PTP Operator not supported
+The (OpenShift Precision Time Protocol operator)[https://docs.openshift.com/container-platform/4.9/networking/using-ptp.html] is not currently supported on Satellite/ROKS.
+
+## 12. Real time kernel not supported
+RH OCP allows users to (switch to a realtime kernel on bare metal workers)[https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#nodes-nodes-rtkernel-arguments_post-install-machine-configuration-tasks]. This is typically required by telco workloads like RAN components, etc. that seek low latency and high degree of determinism. RH OCP manages to install and enable `kernel-rt` on baremetal worker nodes via `machigeConfig` support.
+Currently, IBM Satellite/ROKS does not yet support replacing the kernel with a real-time kernel.
