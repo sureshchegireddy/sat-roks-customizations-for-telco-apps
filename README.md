@@ -21,7 +21,7 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 11. [PTP operator not supported](#11-ptp-operator-not-supported)
 12. [Real time kernel not supported](#12-real-time-kernel-not-supported)
 13. [Enable kernel modules](#13-enable-kernel-modules)
-14. [Image registry configuration](#14-image-registry-condfiguration)
+14. [Image registry configuration](#14-image-registry-configuration)
 
 In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
