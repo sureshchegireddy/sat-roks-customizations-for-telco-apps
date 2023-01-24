@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kernel-optimization-addnl-modules
+  namespace: kube-system
+  labels:
+    tier: management
+    app: kernel-optimization-addnl-modules
+spec:
+  selector:
+    matchLabels:
+      name: kernel-optimization-addnl-modules
+  template:
+    metadata:
+      labels:
+        name: kernel-optimization-addnl-modules
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      initContainers:
+        - command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo sctp >> /etc/modules-load.d/addnl-modules.conf;
+              echo 8021q >> /etc/modules-load.d/addnl-modules.conf;
+              echo vhost_net >> /etc/modules-load.d/addnl-modules.conf;
+              echo nft_limit >> /etc/modules-load.d/addnl-modules.conf;
+              echo nft_ct >> /etc/modules-load.d/addnl-modules.conf;
+              echo nft_counter >> /etc/modules-load.d/addnl-modules.conf;
+              echo nf_tables_set >> /etc/modules-load.d/addnl-modules.conf;
+              echo nf_tables >> /etc/modules-load.d/addnl-modules.conf;
+              echo nfnetlink >> /etc/modules-load.d/addnl-modules.conf;
+              echo nf_conntrack >> /etc/modules-load.d/addnl-modules.conf;
+              sed -i '$s/^/#/' /etc/modprobe.d/sctp-blacklist.conf;
+          image: alpine:3.6
+          imagePullPolicy: IfNotPresent
+          name: sysctl
+          resources: {}
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: modifysys
+              mountPath: /
+      containers:
+        - resources:
+            requests:
+              cpu: 0.01
+          image: alpine:3.6
+          name: sleepforever
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              while true; do
+                sleep 100000;
+              done
+      volumes:
+        - name: modifysys
+          hostPath:
+            path: /

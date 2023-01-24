@@ -1,7 +1,7 @@
 # sat-roks-customizations-for-telco-apps
-**Disclaimer**: This repo is a **Work-In-Progress**, and is yet to be peer-reviewed.
+**Disclaimer**: This repo is a **Work-In-Progress**, and is yet to be peer-reviewed. The list is neither complete nor comprehensive. It has been created as a reference of what worked in some proof-of-concept projects. 
 ## Introduction
-This repository  provides some guidance on openshift customizations that were discovered as prerequisites for typical networking and/or telco workloads/applications. The repo specifically targets on-premises infrastructure (hosts, network, etc.) attached to the IBM Cloud Satellite location where IBM's managed openshift service (ROKS) cluster(s) are deployed on baremetal servers representing the worker nodes. This setup needs some alternative methods for configuring required capabilities in ROKS, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
+This repository  provides some guidance on openshift customizations that were discovered as prerequisites for typical networking and/or telco workloads/applications. The repo specifically targets on-premises infrastructure (hosts, network, etc.) attached to the IBM Cloud Satellite location. This is where IBM's managed openshift service (ROKS) cluster(s) are deployed on baremetal servers representing the worker nodes. This setup needs some alternative methods for configuring required capabilities in ROKS, as compared to the same on Red Hat (RH) OpenShift Container Platform (OCP).
 
 Note that these observations and configurations have been taken from Satellite/ROKS cluster at OpenShift version 4.9.48.
 
@@ -20,6 +20,8 @@ Some of the key capabilities that needed alternative way of configuring on ROKS 
 10. [Performance AddOn Operator not supported](#10-performance-addon-operator-not-supported)
 11. [PTP operator not supported](#11-ptp-operator-not-supported)
 12. [Real time kernel not supported](#12-real-time-kernel-not-supported)
+13. [Enable kernel modules](#13-enable-kernel-modules)
+14. [Image registry configuration](#14-image-registry-condfiguration)
 
 In general, the RH OCP documentation is the usual reference for configuring such custom settings. However, certain resources like `MachineConfig` are not supported on ROKS (IBM's managed Openshift service), and require alternative method for conifguring the capability.
 
@@ -153,6 +155,12 @@ provider "privileged": Forbidden: not usable by user or serviceaccount, provider
 
 One way to configure this is to identify the default `serviceaccount` used in the namespace for deployment, and add it as an `annotation` in the `privileged` SCC.
 
+Following is an example `oc` command to accomplish the same: 
+```
+oc adm policy add-scc-to-user <scc> \  -z <serviceaccount> \  --namespace <namespace>
+```
+IBM Cloud [documentation also provides some guidance for ROKS clusters](https://cloud.ibm.com/docs/openshift?topic=openshift-plan_deploy#openshift_move_apps_example_scc) for further reference.
+
 
 ## 7. ExternalIP support for services
 Satellite/ROKS does not allow `deployments` to create `services` that have an `externalIP` defined. The controller/manager attempting to deploy such a service will encounter errors similar to the following sample:
@@ -197,3 +205,71 @@ The [OpenShift Precision Time Protocol operator](https://docs.openshift.com/cont
 RH OCP allows users to [switch to a realtime kernel on bare metal workers](https://docs.openshift.com/container-platform/4.9/post_installation_configuration/machine-configuration-tasks.html#nodes-nodes-rtkernel-arguments_post-install-machine-configuration-tasks). This is typically required by telco workloads like RAN components (Centralized Unit(CU), Distribution Unit (DU)), etc. that seek low latency and high degree of determinism. RH OCP manages to install and enable `kernel-rt` on baremetal worker nodes via `machigeConfig` support.
 
 Currently, IBM Satellite/ROKS does not yet support replacing the kernel on the CoreOS workers with a real-time kernel.
+
+## 13. Enable kernel modules
+Some workloads/application require additional special purpose modules to be loaded and configured in the kernel for the openshift worker nodes. This includes modules such as `sctp`,`vhost_net`, `nf-*`, etc., and [RH OCP typically uses the machineConfig operator and/or resources to enable the kernel modules as documented here](https://docs.openshift.com/container-platform/4.9/installing/install_config/installing-customizing.html#provisioning-kernel-module-to-ocp_installing-customizing).
+In case of ROKS clusters, the same can be accomplished using the `daemonset` resource, as shown in the following example. :
+```
+apiVersion: apps/v1
+kind: DaemonSet
+...
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      initContainers:
+        - command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo sctp >> /etc/modules-load.d/addtnl-modules.conf;
+              echo 8021q >> /etc/modules-load.d/addtnl-modules.conf;
+              ...
+              sed -i '$s/^/#/' /etc/modprobe.d/sctp-blacklist.conf;
+          image: alpine:3.6
+          imagePullPolicy: IfNotPresent
+          name: sysctl
+          resources: {}
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: modifysys
+              mountPath: /
+      containers:
+        - resources:
+            requests:
+              cpu: 0.01
+          image: alpine:3.6
+          name: sleepforever
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              while true; do
+                sleep 100000;
+              done
+      volumes:
+        - name: modifysys
+          hostPath:
+            path: /
+```
+An example manifest is also available ås a reference [daemonset sample](./examples/addtnl-kernel-modules.yaml) in the [examples](./examples/) folder).
+
+## 14. Image registry configuration
+The openshift local image registry is not enabled by default on Satelite/ROKS clusters. This is unlike RH OCP clusters where the registry is enabled by default. In order to enable the openshift registry, the `storage` and `managementState` settings need to be updated in the `imageregistry` config as follows on the ROKS cluster.
+```
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  ...
+spec:
+  ...
+  storage:
+    emptyDir: {}
+    managementState: Managed
+    ...
+```
+IBM Cloud documentation provides some [guidance in setting up the internal container image register](https://cloud.ibm.com/docs/openshift?topic=openshift-satellite-clusters#satcluster-internal-registry) as well.
+
+Additionally, ROKS does not support propagating/applying mirror registry updates made via `ImageContentSourcePolicy` resource to the worker nodes, unlike on [RH OCP where it is supported](https://docs.openshift.com/container-platform/4.9/openshift_images/image-configuration.html#images-configuration-registry-mirror_image-configuration). So, on ROKS clusters, it is recommended to manuallly update the `/etc/containers/registries.conf` file on each of the worker nodes to configure mirror registry settings, and subsequently reboot the nodes on after the other. This procedure is similar to [the steps 13 and 14 documented here for a different purpose](https://cloud.ibm.com/docs/openshift?topic=openshift-openshift-storage-odf-private#odf-private).
